@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        window.addProductData = function() {
+            return {
+                product: {
+                    name: '',
+                    description: '',
+                    price: '',
+                    stock: '',
+                    image: null
+                },
+                previewImage: null,
+                errorMessage: '',
+                successMessage: '',
+                apiBaseUrl: 'http://172.17.100.14:3226/kent/api/shop',
+
+                handleImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.previewImage = e.target.result;
+                            this.product.image = file;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+
+                async saveProduct() {
+                    try {
+                        const formData = new FormData();
+                        formData.append('name', this.product.name);
+                        formData.append('description', this.product.description);
+                        formData.append('price', this.product.price);
+                        formData.append('stock', this.product.stock);
+                        if (this.product.image) {
+                            formData.append('image', this.product.image);
+                        }
+
+                        const response = await fetch(`${this.apiBaseUrl}/products/`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!response.ok) {
+                            const error = await response.json();
+                            throw new Error(error.detail || 'Failed to add product');
+                        }
+
+                        this.successMessage = 'Product added successfully!';
+                        this.errorMessage = '';
+                        
+                        // Reset form
+                        this.product = {
+                            name: '',
+                            description: '',
+                            price: '',
+                            stock: '',
+                            image: null
+                        };
+                        this.previewImage = null;
+                        
+                        // Clear file input
+                        document.getElementById('imageUpload').value = '';
+                        
+                    } catch (error) {
+                        this.errorMessage = error.message;
+                        this.successMessage = '';
+                    }
+                },
+
+                goToShopHome() {
+                    window.location.href = '/shop/shop_home';
+                }
+            };
+        };
+    </script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: #fff;
+            color: #111;
+            font-size: 40px;
+            padding: 40px;
+        }
+        .ui.container {
+            margin-top: 20px;
+            width: 100vw;
+            padding: 0;
+        }
+        .ui.segment {
+            background: #fff;
+            border-radius: 1rem;
+            box-sizing: border-box;
+            padding: 2rem;
+            margin: 0 auto;
+            max-width: 1200px;
+            width: 90%;
+            border: 1px solid #e3eaff;
+            box-shadow: none;
+        }
+        .ui.header, .page-title, .page-title-3d {
+            color: #0d1a4a !important;
+            text-shadow: none;
+        }
+        .ui.divider {
+            border-top: 1px solid #e3eaff !important;
+        }
+        .ui.form .field label {
+            color: #0d1a4a !important;
+            text-shadow: none;
+        }
+        .ui.form input,
+        .ui.form textarea,
+        .ui.form select {
+            background: #fff !important;
+            color: #111 !important;
+            border: 1px solid #e3eaff !important;
+            border-radius: 0.5rem !important;
+            transition: all 0.3s ease;
+        }
+        .ui.form input:focus,
+        .ui.form textarea:focus,
+        .ui.form select:focus {
+            background: #f7faff !important;
+            border-color: #1976d2 !important;
+            box-shadow: 0 0 10px #e3eaff;
+        }
+        .ui.dropdown, .ui.dropdown .menu {
+            background: #fff !important;
+            color: #111 !important;
+            border: 1px solid #e3eaff !important;
+            border-radius: 0.5rem !important;
+        }
+        .ui.dropdown .menu .item {
+            color: #111 !important;
+        }
+        .ui.dropdown .menu .item:hover {
+            background: #e3eaff !important;
+        }
+        .ui.card {
+            background: #fff !important;
+            border: 1px solid #e3eaff;
+            box-shadow: none;
+        }
+        .ui.card:hover {
+            box-shadow: 0 2px 8px #0d1a4a11;
+        }
+        .ui.card .image img {
+            object-fit: cover;
+            height: 150px;
+            width: 100%;
+            border-radius: 0.5rem 0.5rem 0 0;
+        }
+        .ui.card .content {
+            text-align: center;
+            background: #f7faff;
+        }
+        .ui.button {
+            background: #0d1a4a !important;
+            color: #fff !important;
+            font-weight: bold;
+            border-radius: 2em !important;
+            box-shadow: none;
+            transition: 0.3s ease-in-out;
+        }
+        .ui.button:hover {
+            background: #1976d2 !important;
+            transform: scale(1.05);
+        }
+        .ui.primary.button {
+            background: #1976d2 !important;
+        }
+        .ui.primary.button:hover {
+            background: #0d1a4a !important;
+        }
+        .ui.red.button {
+            background: #fff !important;
+            color: #0d1a4a !important;
+            border: 1px solid #0d1a4a !important;
+            box-shadow: none !important;
+        }
+        .ui.red.button:hover {
+            background: #e3eaff !important;
+            color: #0d1a4a !important;
+        }
+        .ui.message {
+            background: #e3eaff !important;
+            color: #0d1a4a !important;
+            border: 1px solid #0d1a4a !important;
+            box-shadow: none;
+        }
+        .ui.message .header {
+            color: #0d1a4a !important;
+        }
+        .huge.icon {
+            color: #0d1a4a !important;
+            text-shadow: none;
+        }
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #e3eaff;
+        }
+        .page-title {
+            color: #0d1a4a;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui container" x-data="addProductData()">
+        <div class="ui segment">
+            <h1 class="page-title">Add New Product</h1>
+            
+            <form class="ui form" @submit.prevent="saveProduct()">
+                <div class="field">
+                    <label>Product Name</label>
+                    <input type="text" x-model="product.name" placeholder="Enter product name" required>
+                </div>
+
+                <div class="field">
+                    <label>Description</label>
+                    <textarea x-model="product.description" placeholder="Enter product description" rows="3"></textarea>
+                </div>
+
+                <div class="two fields">
+                    <div class="field">
+                        <label>Price ($)</label>
+                        <input type="number" x-model="product.price" placeholder="Enter price" step="0.01" min="0" required>
+                    </div>
+                    <div class="field">
+                        <label>Stock</label>
+                        <input type="number" x-model="product.stock" placeholder="Enter stock quantity" min="0" required>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Product Image</label>
+                    <div class="ui fluid button" @click="document.getElementById('imageUpload').click()">
+                        <i class="upload icon"></i> Upload Image
+                    </div>
+                    <input type="file" id="imageUpload" @change="handleImageUpload($event)" accept="image/*" style="display: none">
+                    <img x-show="previewImage" :src="previewImage" class="preview-image">
+                </div>
+
+                <div class="ui message" x-show="errorMessage">
+                    <div class="header">Error</div>
+                    <p x-text="errorMessage"></p>
+                </div>
+
+                <div class="ui message" x-show="successMessage">
+                    <div class="header">Success</div>
+                    <p x-text="successMessage"></p>
+                </div>
+
+                <div class="ui buttons">
+                    <button type="button" class="ui button" onclick="window.location.href='index.html#shop/shop_home'">Cancel</button>
+                    <div class="or"></div>
+                    <button type="submit" class="ui primary button">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
