@@ -1,5 +1,3 @@
-
-
 const appContent = document.getElementById("app-content"); // Main content area
 
 function loadPage(routePath) {
@@ -88,4 +86,14 @@ window.addEventListener("popstate", () => {
 document.addEventListener("DOMContentLoaded", () => {
     navigateTo(location.hash.slice(1) || "home/welcome");
 });
+
+const routes = {
+    'shop/shop_home': 'pages/shop/shop_home.html',
+    'shop/cart': 'pages/shop/cart.html',
+    'shop/add_product': 'pages/shop/add_product.html',
+    'shop/order_list': 'pages/shop/order_list.html',
+    'shop/checkout': 'pages/shop/checkout.html',
+    'shop/login': 'pages/shop/login.html',
+    'shop/userprofile': 'pages/shop/userprofile.html'
+};
 

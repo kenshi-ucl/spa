@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Kent Shop</title>
+    
+    <!-- Semantic UI CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+    
+    <!-- Alpine.js -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    
+    <!-- jQuery (required for Semantic UI) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Semantic UI JS -->
+    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+    
+    <style>
+        body {
+            background: #f7f9fc;
+            color: #2c3e50;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .profile-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            transition: transform 0.2s;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1976d2;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, #1976d2, #0d47a1);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .recent-activity {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .activity-item {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .edit-profile-btn {
+            background: #1976d2;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .edit-profile-btn:hover {
+            background: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container" x-data="userProfile()" x-init="init()">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="ui grid">
+                <div class="four wide column">
+                    <img :src="user.avatar || 'https://semantic-ui.com/images/avatar2/large/kristy.png'" 
+                         alt="Profile Avatar" 
+                         class="profile-avatar">
+                </div>
+                <div class="twelve wide column">
+                    <h1 class="ui header" style="color: white;">
+                        <span x-text="user.firstName + ' ' + user.lastName"></span>
+                        <div class="sub header" style="color: #e3f2fd;">
+                            <i class="envelope icon"></i>
+                            <span x-text="user.email"></span>
+                        </div>
+                    </h1>
+                    <button class="edit-profile-btn" @click="openEditModal">
+                        <i class="edit icon"></i> Edit Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Grid -->
+        <div class="ui three column grid">
+            <div class="column">
+                <div class="stats-card">
+                    <div class="stat-number" x-text="stats.totalOrders || 0"></div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+            </div>
+            <div class="column">
+                <div class="stats-card">
+                    <div class="stat-number">$<span x-text="(stats.totalSpent || 0).toFixed(2)"></span></div>
+                    <div class="stat-label">Total Spent</div>
+                </div>
+            </div>
+            <div class="column">
+                <div class="stats-card">
+                    <div class="stat-number" x-text="stats.cartItems || 0"></div>
+                    <div class="stat-label">Items in Cart</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="recent-activity">
+            <h3 class="ui header">Recent Activity</h3>
+            <div class="ui divided list">
+                <template x-for="activity in recentActivity" :key="activity.id">
+                    <div class="activity-item">
+                        <div class="ui grid">
+                            <div class="twelve wide column">
+                                <h4 class="ui header" x-text="activity.title"></h4>
+                                <p x-text="activity.description"></p>
+                                <div class="meta">
+                                    <span x-text="formatDate(activity.date)"></span>
+                                </div>
+                            </div>
+                            <div class="four wide column right aligned">
+                                <span class="ui label" x-text="activity.type"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Edit Profile Modal -->
+        <div class="ui modal" id="editProfileModal">
+            <i class="close icon"></i>
+            <div class="header">
+                Edit Profile
+            </div>
+            <div class="content">
+                <form class="ui form" @submit.prevent="updateProfile">
+                    <div class="field">
+                        <label for="edit-firstname">First Name</label>
+                        <input type="text" 
+                               id="edit-firstname" 
+                               name="firstName"
+                               x-model="editForm.firstName" 
+                               required 
+                               autocomplete="given-name">
+                    </div>
+                    <div class="field">
+                        <label for="edit-lastname">Last Name</label>
+                        <input type="text" 
+                               id="edit-lastname" 
+                               name="lastName"
+                               x-model="editForm.lastName" 
+                               required 
+                               autocomplete="family-name">
+                    </div>
+                    <div class="field">
+                        <label for="edit-email">Email</label>
+                        <input type="email" 
+                               id="edit-email" 
+                               name="email"
+                               x-model="editForm.email" 
+                               required 
+                               autocomplete="email">
+                    </div>
+                    <div class="field">
+                        <label for="edit-password">New Password (leave blank to keep current)</label>
+                        <input type="password" 
+                               id="edit-password" 
+                               name="password"
+                               x-model="editForm.password" 
+                               autocomplete="new-password">
+                    </div>
+                </form>
+            </div>
+            <div class="actions">
+                <div class="ui black deny button">
+                    Cancel
+                </div>
+                <div class="ui positive right labeled icon button" @click="updateProfile">
+                    Save Changes
+                    <i class="checkmark icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function userProfile() {
+            return {
+                user: null,
+                stats: {
+                    totalOrders: 0,
+                    totalSpent: 0,
+                    cartItems: 0
+                },
+                recentActivity: [],
+                editForm: {
+                    firstName: '',
+                    lastName: '',
+                    email: '',
+                    password: ''
+                },
+                error: null,
+
+                init() {
+                    // Load user data from localStorage
+                    const userData = localStorage.getItem('userData');
+                    const token = localStorage.getItem('auth_token');
+                    
+                    if (!token) {
+                        window.location.href = '#shop/login';
+                        return;
+                    }
+
+                    if (userData) {
+                        this.user = JSON.parse(userData);
+                        
+                        // Initialize stats with default values
+                        this.stats = {
+                            totalOrders: 0,
+                            totalSpent: 0,
+                            cartItems: 0
+                        };
+
+                        // Get cart items count from localStorage
+                        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                        this.stats.cartItems = cart.length;
+
+                        this.loadUserStats();
+                        this.loadRecentActivity();
+                    } else {
+                        // Redirect to login if no user data
+                        window.location.href = '#shop/login';
+                    }
+                },
+
+                loadUserStats() {
+                    // Get token from localStorage
+                    const token = localStorage.getItem('auth_token');
+                    
+                    if (!token) {
+                        console.error('No auth token found');
+                        window.location.href = '#shop/login';
+                        return;
+                    }
+
+                    // Fetch user statistics from the API
+                    fetch('http://172.22.201.82:3000/kenshi/api/shop/user-stats/', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 401 || response.status === 403) {
+                                // Clear invalid token
+                                localStorage.removeItem('auth_token');
+                                window.location.href = '#shop/login';
+                                throw new Error('Authentication failed');
+                            }
+                            throw new Error('Failed to load user stats');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Received stats:', data);
+                        // Update stats with API response data
+                        this.stats = {
+                            totalOrders: data.totalOrders || 0,
+                            totalSpent: parseFloat(data.totalSpent || 0),
+                            cartItems: data.cartItems || 0
+                        };
+                    })
+                    .catch(error => {
+                        console.error('Error loading user stats:', error);
+                        if (error.message.includes('Authentication failed')) {
+                            window.location.href = '#shop/login';
+                        }
+                    });
+                },
+
+                loadRecentActivity() {
+                    const token = localStorage.getItem('auth_token');
+                    
+                    if (!token) {
+                        console.error('No auth token found');
+                        window.location.href = '#shop/login';
+                        return;
+                    }
+
+                    fetch('http://172.22.201.82:3000/kenshi/api/shop/user-activity/', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 401 || response.status === 403) {
+                                localStorage.removeItem('auth_token');
+                                window.location.href = '#shop/login';
+                                throw new Error('Authentication failed');
+                            }
+                            throw new Error('Failed to load activity');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Received activity:', data);
+                        this.recentActivity = Array.isArray(data) ? data.map(activity => ({
+                            ...activity,
+                            date: new Date(activity.date)
+                        })) : [];
+                    })
+                    .catch(error => {
+                        console.error('Error loading recent activity:', error);
+                        if (error.message.includes('Authentication failed')) {
+                            window.location.href = '#shop/login';
+                        }
+                    });
+                },
+
+                openEditModal() {
+                    this.editForm = {
+                        firstName: this.user.firstName,
+                        lastName: this.user.lastName,
+                        email: this.user.email,
+                        password: ''
+                    };
+                    $('#editProfileModal').modal('show');
+                },
+
+                updateProfile() {
+                    const token = this.user?.token;
+                    if (!token) return;
+
+                    const updateData = {
+                        first_name: this.editForm.firstName,
+                        last_name: this.editForm.lastName,
+                        email: this.editForm.email
+                    };
+
+                    if (this.editForm.password) {
+                        updateData.password = this.editForm.password;
+                    }
+
+                    fetch('http://172.22.201.82:3000/kenshi/api/shop/update-profile/', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(updateData)
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 403) {
+                                throw new Error('Authentication failed. Please login again.');
+                            }
+                            throw new Error('Failed to update profile');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Update local user data
+                        this.user = {
+                            ...this.user,
+                            firstName: data.first_name,
+                            lastName: data.last_name,
+                            email: data.email
+                        };
+                        localStorage.setItem('userData', JSON.stringify(this.user));
+                        
+                        // Close modal
+                        $('#editProfileModal').modal('hide');
+                        
+                        // Show success message
+                        this.showMessage('Profile updated successfully!', 'success');
+                    })
+                    .catch(error => {
+                        console.error('Error updating profile:', error);
+                        this.showMessage(error.message, 'error');
+                        if (error.message.includes('Authentication failed')) {
+                            localStorage.removeItem('userData');
+                            window.location.href = '#shop/login';
+                        }
+                    });
+                },
+
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+
+                showMessage(message, type) {
+                    // You can implement your preferred notification system here
+                    alert(message);
+                }
+            };
+        }
+    </script>
+</body>
+</html> 

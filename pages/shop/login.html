@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Sheryn Shop</title>
+  <title>Login - Kent Shop</title>
   
   <!-- Semantic UI CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
@@ -28,6 +28,7 @@
 
     .ui.container {
       margin-top: 20px;
+      right: 10;
       width: 100%;
       max-width: 1200px;
       margin: 0 auto;
@@ -225,6 +226,15 @@
     .ui.left.icon.input > input:focus + i.icon {
       color: #0d1a4a !important;
     }
+
+    .ui.message.clickable {
+      cursor: pointer;
+      transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .ui.message.clickable:hover {
+      transform: scale(1.04);
+      box-shadow: 0 4px 24px 0 rgba(33, 150, 243, 0.10);
+    }
   </style>
 </head>
 <body>
@@ -233,113 +243,155 @@
   <div class="ui segment">
     <h1 class="ui header">Account Access</h1>
     
-    <div class="ui two column middle aligned very relaxed stackable grid">
-      <div class="column">
-        <form class="ui form" @submit.prevent="loginUser()">
-          <h2 class="ui header">Login</h2>
-          <div class="field" :class="{ 'error': loginFormErrors.email }">
-            <label>Email</label>
-            <div class="ui left icon input">
-              <input type="email" x-model="loginForm.email" placeholder="Email address" required>
-              <i class="user icon"></i>
+    <template x-if="!showRegister">
+      <form class="ui form" @submit.prevent="loginUser()">
+        <h2 class="ui header">Login</h2>
+        <div class="field" :class="{ 'error': loginFormErrors.email }">
+          <label for="login-email">Email</label>
+          <div class="ui left icon input">
+            <input type="email" 
+                   id="login-email"
+                   name="login-email"
+                   x-model="loginForm.email" 
+                   placeholder="Email address" 
+                   autocomplete="username" 
+                   required>
+            <i class="user icon"></i>
+          </div>
+          <div class="ui pointing red basic label" x-show="loginFormErrors.email" x-text="loginFormErrors.email"></div>
+        </div>
+        <div class="field" :class="{ 'error': loginFormErrors.password }">
+          <label for="login-password">Password</label>
+          <div class="ui left icon input">
+            <input type="password" 
+                   id="login-password"
+                   name="login-password"
+                   x-model="loginForm.password" 
+                   placeholder="Password" 
+                   autocomplete="current-password" 
+                   required>
+            <i class="lock icon"></i>
+          </div>
+          <div class="ui pointing red basic label" x-show="loginFormErrors.password" x-text="loginFormErrors.password"></div>
+        </div>
+        <div class="field">
+          <div class="ui checkbox">
+            <input type="checkbox" x-model="loginForm.rememberMe">
+            <label>Remember me</label>
+          </div>
+        </div>
+        <button class="ui blue submit button" type="submit" :class="{ 'loading': isLoggingIn }">Login</button>
+        
+        <div class="ui error message" x-show="loginError">
+          <div class="header">Login Failed</div>
+          <p x-text="loginError"></p>
+        </div>
+        
+        <div class="ui message">
+          <div class="ui horizontal divider">Or</div>
+          <div class="ui centered grid">
+            <div class="column">
+              <button class="ui facebook button" type="button">
+                <i class="facebook icon"></i>
+                Login with Facebook
+              </button>
+              <button class="ui google plus button" type="button">
+                <i class="google icon"></i>
+                Login with Google
+              </button>
             </div>
-            <div class="ui pointing red basic label" x-show="loginFormErrors.email" x-text="loginFormErrors.email"></div>
           </div>
-          <div class="field" :class="{ 'error': loginFormErrors.password }">
-            <label>Password</label>
-            <div class="ui left icon input">
-              <input type="password" x-model="loginForm.password" placeholder="Password" required>
-              <i class="lock icon"></i>
-            </div>
-            <div class="ui pointing red basic label" x-show="loginFormErrors.password" x-text="loginFormErrors.password"></div>
+        </div>
+        <div class="ui message clickable" @click="forgotPassword()">
+          <p>Forgot Password?</p>
+        </div>
+        <div class="ui message clickable" @click="showRegister = true">
+          <p>REGISTER</p>
+        </div>
+        <div class="ui message clickable" @click="guestCheckout()">
+          <p>Continue as Guest</p>
+        </div>
+      </form>
+    </template>
+    <template x-if="showRegister">
+      <form class="ui form" @submit.prevent="registerUser()">
+        <h2 class="ui header">Register</h2>
+        <div class="field" :class="{ 'error': registerFormErrors.firstName }">
+          <label for="register-firstname">First Name</label>
+          <input type="text" 
+                 id="register-firstname"
+                 name="register-firstname"
+                 x-model="registerForm.firstName" 
+                 placeholder="First Name" 
+                 autocomplete="given-name" 
+                 required>
+          <div class="ui pointing red basic label" x-show="registerFormErrors.firstName" x-text="registerFormErrors.firstName"></div>
+        </div>
+        <div class="field" :class="{ 'error': registerFormErrors.lastName }">
+          <label for="register-lastname">Last Name</label>
+          <input type="text" 
+                 id="register-lastname"
+                 name="register-lastname"
+                 x-model="registerForm.lastName" 
+                 placeholder="Last Name" 
+                 autocomplete="family-name" 
+                 required>
+          <div class="ui pointing red basic label" x-show="registerFormErrors.lastName" x-text="registerFormErrors.lastName"></div>
+        </div>
+        <div class="field" :class="{ 'error': registerFormErrors.email }">
+          <label for="register-email">Email</label>
+          <input type="email" 
+                 id="register-email"
+                 name="register-email"
+                 x-model="registerForm.email" 
+                 placeholder="Email" 
+                 autocomplete="username" 
+                 required>
+          <div class="ui pointing red basic label" x-show="registerFormErrors.email" x-text="registerFormErrors.email"></div>
+        </div>
+        <div class="field" :class="{ 'error': registerFormErrors.password }">
+          <label for="register-password">Password</label>
+          <input type="password" 
+                 id="register-password"
+                 name="register-password"
+                 x-model="registerForm.password" 
+                 placeholder="Password" 
+                 autocomplete="new-password" 
+                 required>
+          <div class="ui pointing red basic label" x-show="registerFormErrors.password" x-text="registerFormErrors.password"></div>
+        </div>
+        <div class="field" :class="{ 'error': registerFormErrors.confirmPassword }">
+          <label for="register-confirm-password">Confirm Password</label>
+          <input type="password" 
+                 id="register-confirm-password"
+                 name="register-confirm-password"
+                 x-model="registerForm.confirmPassword" 
+                 placeholder="Confirm Password" 
+                 autocomplete="new-password" 
+                 required>
+          <div class="ui pointing red basic label" x-show="registerFormErrors.confirmPassword" x-text="registerFormErrors.confirmPassword"></div>
+        </div>
+        <div class="field">
+          <div class="ui checkbox">
+            <input type="checkbox" 
+                   id="register-terms"
+                   name="register-terms"
+                   x-model="registerForm.acceptTerms" 
+                   required>
+            <label for="register-terms">I agree to the <a href="#" @click.prevent="showTerms()">Terms and Conditions</a></label>
           </div>
-          <div class="field">
-            <div class="ui checkbox">
-              <input type="checkbox" x-model="loginForm.rememberMe">
-              <label>Remember me</label>
-            </div>
-          </div>
-          <button class="ui blue submit button" type="submit" :class="{ 'loading': isLoggingIn }">Login</button>
-          
-          <div class="ui error message" x-show="loginError">
-            <div class="header">Login Failed</div>
-            <p x-text="loginError"></p>
-          </div>
-          
-          <div class="ui message">
-            <div class="ui horizontal divider">Or</div>
-            <div class="ui centered grid">
-              <div class="column">
-                <button class="ui facebook button" type="button">
-                  <i class="facebook icon"></i>
-                  Login with Facebook
-                </button>
-                <button class="ui google plus button" type="button">
-                  <i class="google icon"></i>
-                  Login with Google
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <div class="ui message">
-            <p><a href="#" @click.prevent="forgotPassword()">Forgot Password?</a></p>
-          </div>
-          
-          <div class="ui message">
-            <p><a href="#" @click.prevent="guestCheckout()">Continue as Guest</a></p>
-          </div>
-        </form>
-      </div>
-      
-      <div class="ui vertical divider">
-        Or
-      </div>
-      
-      <div class="column">
-        <form class="ui form" @submit.prevent="registerUser()">
-          <h2 class="ui header">Register</h2>
-          <div class="field" :class="{ 'error': registerFormErrors.firstName }">
-            <label>First Name</label>
-            <input type="text" x-model="registerForm.firstName" placeholder="First Name" required>
-            <div class="ui pointing red basic label" x-show="registerFormErrors.firstName" x-text="registerFormErrors.firstName"></div>
-          </div>
-          <div class="field" :class="{ 'error': registerFormErrors.lastName }">
-            <label>Last Name</label>
-            <input type="text" x-model="registerForm.lastName" placeholder="Last Name" required>
-            <div class="ui pointing red basic label" x-show="registerFormErrors.lastName" x-text="registerFormErrors.lastName"></div>
-          </div>
-          <div class="field" :class="{ 'error': registerFormErrors.email }">
-            <label>Email</label>
-            <input type="email" x-model="registerForm.email" placeholder="Email" required>
-            <div class="ui pointing red basic label" x-show="registerFormErrors.email" x-text="registerFormErrors.email"></div>
-          </div>
-          <div class="field" :class="{ 'error': registerFormErrors.password }">
-            <label>Password</label>
-            <input type="password" x-model="registerForm.password" placeholder="Password" required>
-            <div class="ui pointing red basic label" x-show="registerFormErrors.password" x-text="registerFormErrors.password"></div>
-          </div>
-          <div class="field" :class="{ 'error': registerFormErrors.confirmPassword }">
-            <label>Confirm Password</label>
-            <input type="password" x-model="registerForm.confirmPassword" placeholder="Confirm Password" required>
-            <div class="ui pointing red basic label" x-show="registerFormErrors.confirmPassword" x-text="registerFormErrors.confirmPassword"></div>
-          </div>
-          <div class="field">
-            <div class="ui checkbox">
-              <input type="checkbox" x-model="registerForm.acceptTerms" required>
-              <label>I agree to the <a href="#" @click.prevent="showTerms()">Terms and Conditions</a></label>
-            </div>
-            <div class="ui pointing red basic label" x-show="registerFormErrors.acceptTerms" x-text="registerFormErrors.acceptTerms"></div>
-          </div>
-          <button class="ui green submit button" type="submit" :class="{ 'loading': isRegistering }">Register</button>
-          
-          <div class="ui error message" x-show="registerError">
-            <div class="header">Registration Failed</div>
-            <p x-text="registerError"></p>
-          </div>
-        </form>
-      </div>
-    </div>
+          <div class="ui pointing red basic label" x-show="registerFormErrors.acceptTerms" x-text="registerFormErrors.acceptTerms"></div>
+        </div>
+        <button class="ui green submit button" type="submit" :class="{ 'loading': isRegistering }">Register</button>
+        <div class="ui error message" x-show="registerError">
+          <div class="header">Registration Failed</div>
+          <p x-text="registerError"></p>
+        </div>
+        <div class="ui message">
+          <p><a href="#" @click.prevent="showRegister = false">Back to Login</a></p>
+        </div>
+      </form>
+    </template>
   </div>
   
   <!-- Password Recovery Modal -->
@@ -477,6 +529,8 @@ function loginSystem() {
     // Redirect info
     returnToCheckout: false,
     
+    showRegister: false,
+    
     init() {
       // Initialize Semantic UI components
       this.$nextTick(() => {
@@ -596,63 +650,60 @@ function loginSystem() {
       this.isLoggingIn = true;
       this.loginError = '';
       
-      // In a real app, this would make an API call to authenticate the user
-      setTimeout(() => {
-        // For demo purposes, we'll simulate a successful login if email contains "user"
-        // and password length is at least 4 characters
-        const isValidLogin = this.loginForm.email.includes('user') && this.loginForm.password.length >= 4;
+      fetch('http://172.22.201.82:3000/kenshi/api/shop/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: this.loginForm.email,
+          password: this.loginForm.password
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Invalid credentials');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Store user data
+        const userData = {
+          id: data.id,
+          email: data.email,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          isAuthenticated: true
+        };
         
-        if (isValidLogin) {
-          // Create user object
-          this.user = {
-            id: 1,
-            email: this.loginForm.email,
-            firstName: 'Demo',
-            lastName: 'User',
-            isAuthenticated: true
-          };
-          
-          // Save to localStorage
-          localStorage.setItem('userData', JSON.stringify(this.user));
-          
-          // Save email for future logins if remember me is checked
-          if (this.loginForm.rememberMe) {
-            localStorage.setItem('savedEmail', this.loginForm.email);
-          } else {
-            localStorage.removeItem('savedEmail');
-          }
-          
-          // Update global store
-          if (!Alpine.store('shopStore')) {
-            Alpine.store('shopStore', {
-              cart: [],
-              user: this.user,
-              apiBaseUrl: 'http://localhost:3000/sheryn/api'
-            });
-          } else {
-            Alpine.store('shopStore').user = this.user;
-          }
-          
-          // Show success message
-          this.showSuccessModal(
-            'Login Successful',
-            'Welcome Back!',
-            'You have successfully logged in to your account.',
-            () => {
-              // Redirect user appropriately
-              if (this.returnToCheckout) {
-                this.redirectToCheckout();
-              } else {
-                window.location.href = 'index.html#shop/shop_home';
-              }
-            }
-          );
-        } else {
-          this.loginError = 'Invalid email or password. Please try again.';
+        // Save to localStorage
+        localStorage.setItem('userData', JSON.stringify(userData));
+        
+        // Save auth token
+        if (data.token) {
+          localStorage.setItem('auth_token', data.token);
         }
         
+        // Save email for future logins if remember me is checked
+        if (this.loginForm.rememberMe) {
+          localStorage.setItem('savedEmail', this.loginForm.email);
+        } else {
+          localStorage.removeItem('savedEmail');
+        }
+        
+        // Update global state
+        Alpine.store('shopStore').user = userData;
+        
+        // Redirect to profile page
+        window.location.href = '#shop/userprofile';
+      })
+      .catch(error => {
+        console.error('Login error:', error);
+        this.loginError = error.message;
+      })
+      .finally(() => {
         this.isLoggingIn = false;
-      }, 1000);
+      });
     },
     
     registerUser() {
@@ -663,23 +714,32 @@ function loginSystem() {
       this.isRegistering = true;
       this.registerError = '';
       
-      // In a real app, this would make an API call to create a new user
-      setTimeout(() => {
-        // For demo, simulate successful registration unless email contains "taken"
-        const isEmailTaken = this.registerForm.email.includes('taken');
-        
-        if (isEmailTaken) {
-          this.registerError = 'This email address is already registered. Please use another email or login to your existing account.';
-          this.isRegistering = false;
-          return;
-        }
-        
-        // Create user object
-        this.user = {
-          id: 2, // In a real app, this would be assigned by the server
+      // Make API call to register the user
+      fetch('http://172.22.201.82:3000/kenshi/api/shop/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email: this.registerForm.email,
-          firstName: this.registerForm.firstName,
-          lastName: this.registerForm.lastName,
+          password: this.registerForm.password,
+          first_name: this.registerForm.firstName,
+          last_name: this.registerForm.lastName
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Create user object from response
+        this.user = {
+          id: data.id,
+          email: data.email,
+          firstName: data.first_name,
+          lastName: data.last_name,
           isAuthenticated: true
         };
         
@@ -691,7 +751,7 @@ function loginSystem() {
           Alpine.store('shopStore', {
             cart: [],
             user: this.user,
-            apiBaseUrl: 'http://localhost:3000/api'
+            apiBaseUrl: 'http://172.22.201.82:3000/kenshi/api'
           });
         } else {
           Alpine.store('shopStore').user = this.user;
@@ -711,9 +771,22 @@ function loginSystem() {
             }
           }
         );
-        
+      })
+      .catch(error => {
+        if (typeof error === 'object') {
+          // Handle validation errors
+          let errorMessage = '';
+          for (const [field, messages] of Object.entries(error)) {
+            errorMessage += `${field}: ${messages.join(', ')}\n`;
+          }
+          this.registerError = errorMessage || 'Registration failed. Please try again.';
+        } else {
+          this.registerError = error.toString();
+        }
+      })
+      .finally(() => {
         this.isRegistering = false;
-      }, 1000);
+      });
     },
     
     forgotPassword() {

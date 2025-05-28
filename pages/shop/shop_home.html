@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
     <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <style>
     body {
       margin: 0;
@@ -39,10 +40,13 @@
         border-radius: 8px;
         transition: box-shadow 0.2s;
         box-shadow: none;
+        cursor: pointer;
+        transition: transform 0.2s;
     }
 
     .product-card:hover {
         box-shadow: 0 2px 8px #0d1a4a11;
+        transform: translateY(-5px);
     }
 
     .product-card .content {
@@ -149,6 +153,67 @@
     .cart-icon {
         position: relative;
     }
+
+    .rating {
+        color: #ffd700;
+        font-size: 1.2em;
+        margin: 10px 0;
+    }
+
+    .review-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .review-modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .star-rating {
+        display: flex;
+        gap: 5px;
+        font-size: 1.5em;
+        margin: 10px 0;
+    }
+
+    .star-rating i {
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .star-rating i.active {
+        color: #ffd700;
+    }
+
+    .reviews-section {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f7faff;
+        border-radius: 8px;
+    }
+
+    .review-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e3eaff;
+    }
+
+    .review-item:last-child {
+        border-bottom: none;
+    }
   </style>
 </head>
 <body>
@@ -160,10 +225,29 @@
             successMessage: '',
             cartCount: 0,
             apiBaseUrl: 'http://172.22.201.82:3000/kenshi/api/shop',
+            showReviewModal: false,
+            selectedProduct: null,
+            reviewRating: 0,
+            reviewComment: '',
             
             async init() {
                 await this.fetchProducts();
                 this.updateCartCount();
+
+                // Check for pending review after login
+                const pendingReview = localStorage.getItem('pendingReview');
+                if (pendingReview) {
+                    const review = JSON.parse(pendingReview);
+                    const product = this.products.find(p => p.id === review.productId);
+                    if (product) {
+                        this.selectedProduct = product;
+                        this.reviewRating = review.rating;
+                        this.reviewComment = review.comment;
+                        this.showReviewModal = true;
+                        // Clear pending review
+                        localStorage.removeItem('pendingReview');
+                    }
+                }
             },
 
             updateCartCount() {
@@ -284,6 +368,109 @@
                     this.errorMessage = 'Failed to add item to cart. Please try again.';
                     setTimeout(() => { this.errorMessage = ''; }, 3000);
                 }
+            },
+
+            async showProductDetails(product) {
+                this.selectedProduct = product;
+                this.showReviewModal = true;
+            },
+
+            closeReviewModal() {
+                this.showReviewModal = false;
+                this.selectedProduct = null;
+                this.reviewRating = 0;
+                this.reviewComment = '';
+            },
+
+            setRating(rating) {
+                this.reviewRating = rating;
+            },
+
+            async submitReview() {
+                if (!this.reviewRating || !this.reviewComment) {
+                    this.errorMessage = 'Please provide both rating and comment';
+                    setTimeout(() => { this.errorMessage = ''; }, 3000);
+                    return;
+                }
+
+                try {
+                    const token = localStorage.getItem('authToken');
+                    if (!token) {
+                        // Save current state
+                        localStorage.setItem('pendingReview', JSON.stringify({
+                            productId: this.selectedProduct.id,
+                            rating: this.reviewRating,
+                            comment: this.reviewComment
+                        }));
+                        // Store current URL to return after login
+                        localStorage.setItem('returnUrl', window.location.href);
+                        // Navigate to login
+                        window.location.href = 'index.html#shop/login';
+                        return;
+                    }
+
+                    const response = await fetch(`${this.apiBaseUrl}/products/${this.selectedProduct.id}/review/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            rating: this.reviewRating,
+                            comment: this.reviewComment
+                        })
+                    });
+
+                    if (response.status === 401) {
+                        // Token expired or invalid
+                        localStorage.removeItem('authToken');
+                        // Save current state
+                        localStorage.setItem('pendingReview', JSON.stringify({
+                            productId: this.selectedProduct.id,
+                            rating: this.reviewRating,
+                            comment: this.reviewComment
+                        }));
+                        // Store current URL to return after login
+                        localStorage.setItem('returnUrl', window.location.href);
+                        // Navigate to login
+                        window.location.href = 'index.html#shop/login';
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to submit review');
+                    }
+
+                    const review = await response.json();
+                    
+                    // Add the new review to the product's reviews array
+                    if (!this.selectedProduct.reviews) {
+                        this.selectedProduct.reviews = [];
+                    }
+                    this.selectedProduct.reviews.unshift(review);
+                    
+                    // Update the product in the products array
+                    const productIndex = this.products.findIndex(p => p.id === this.selectedProduct.id);
+                    if (productIndex !== -1) {
+                        this.products[productIndex] = {...this.selectedProduct};
+                    }
+                    
+                    this.successMessage = 'Review submitted successfully!';
+                    setTimeout(() => { this.successMessage = ''; }, 3000);
+                    
+                    // Clear form
+                    this.reviewRating = 0;
+                    this.reviewComment = '';
+                    
+                    // Close modal
+                    this.showReviewModal = false;
+
+                } catch (error) {
+                    console.error('Error submitting review:', error);
+                    this.errorMessage = error.message || 'Failed to submit review. Please try again.';
+                    setTimeout(() => { this.errorMessage = ''; }, 3000);
+                }
             }
          }">
         
@@ -319,7 +506,7 @@
         <template x-if="!loading">
             <div class="ui three stackable cards">
                 <template x-for="product in products" :key="product.id">
-                    <div class="product-card card">
+                    <div class="product-card card" @click="showProductDetails(product)">
                         <div class="product-image-container">
                             <img :src="product.image || 'https://placehold.co/400x200?text=No+Image'" 
                                  :alt="product.name"
@@ -331,11 +518,18 @@
                                 <span class="price">$<span x-text="product.price"></span></span>
                                 <span class="stock">Stock: <span x-text="product.stock"></span></span>
                             </div>
+                            <div class="rating">
+                                <template x-for="i in 5" :key="i">
+                                    <i class="star icon" 
+                                       :class="{ 'active': i <= product.average_rating }"></i>
+                                </template>
+                                <span x-text="'(' + (product.reviews ? product.reviews.length : 0) + ' reviews)'"></span>
+                            </div>
                             <div class="description" x-text="product.description"></div>
                         </div>
                         <div class="extra content">
                             <button class="ui button" 
-                                    @click="addToCart(product)"
+                                    @click.stop="addToCart(product)"
                                     :disabled="product.stock === 0">
                                 <i class="shopping cart icon"></i> Add to Cart
                             </button>
@@ -344,6 +538,59 @@
                 </template>
             </div>
         </template>
+
+        <!-- Review Modal -->
+        <div class="review-modal" x-show="showReviewModal" @click="closeReviewModal">
+            <div class="review-modal-content" @click.stop>
+                <template x-if="selectedProduct">
+                    <div>
+                        <h2 x-text="selectedProduct.name"></h2>
+                        <div class="star-rating">
+                            <template x-for="i in 5" :key="i">
+                                <i class="star icon" 
+                                   :class="{ 'active': i <= reviewRating }"
+                                   @click="setRating(i)"
+                                   @mouseover="$el.classList.add('active')"
+                                   @mouseout="$el.classList.remove('active')"></i>
+                            </template>
+                        </div>
+                        <div class="ui form">
+                            <div class="field">
+                                <label for="review-comment">Your Review</label>
+                                <textarea id="review-comment"
+                                          name="review-comment"
+                                          x-model="reviewComment" 
+                                          rows="3" 
+                                          placeholder="Write your review here..."></textarea>
+                            </div>
+                            <button class="ui primary button" @click="submitReview">Submit Review</button>
+                        </div>
+
+                        <div class="reviews-section">
+                            <h3>Reviews</h3>
+                            <template x-if="selectedProduct.reviews && selectedProduct.reviews.length > 0">
+                                <div>
+                                    <template x-for="review in selectedProduct.reviews" :key="review.id">
+                                        <div class="review-item">
+                                            <div class="rating">
+                                                <template x-for="i in 5" :key="i">
+                                                    <i class="star icon" :class="{ 'active': i <= review.rating }"></i>
+                                                </template>
+                                            </div>
+                                            <div x-text="review.comment"></div>
+                                            <small x-text="'By ' + review.user_email + ' on ' + new Date(review.created_at).toLocaleDateString()"></small>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="!selectedProduct.reviews || selectedProduct.reviews.length === 0">
+                                <p>No reviews yet. Be the first to review!</p>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
     </div>
 </body>
 </html>

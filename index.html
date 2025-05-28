@@ -124,27 +124,96 @@
 </head>
 <body>
     <div class="ui inverted menu" x-data="{ 
-        ...menuData,
         isSticky: false,
         lastScrollY: 0,
+        user: null,
         init() {
             window.addEventListener('scroll', () => {
                 const currentScrollY = window.scrollY;
                 this.isSticky = currentScrollY > 50;
                 this.lastScrollY = currentScrollY;
             });
+            
+            // Load user data
+            const userData = localStorage.getItem('userData');
+            if (userData) {
+                this.user = JSON.parse(userData);
+            }
+
+            // Initialize dropdown with silent option and proper cleanup
+            this.$nextTick(() => {
+                const $dropdown = $(this.$el).find('.ui.dropdown');
+                $dropdown.dropdown({
+                    action: 'nothing',
+                    silent: true,
+                    onHide: () => {
+                        // Ensure proper cleanup of transition elements
+                        $dropdown.find('.menu').removeClass('transition visible');
+                        return true;
+                    }
+                });
+            });
+
+            // Cleanup on navigation
+            window.addEventListener('hashchange', () => {
+                $(this.$el).find('.ui.dropdown').dropdown('hide');
+            });
+        },
+        navigateTo(route) {
+            // Hide dropdown before navigation
+            $(this.$el).find('.ui.dropdown').dropdown('hide');
+            window.navigateTo(route);
+        },
+        logout() {
+            // Hide dropdown before logout
+            $(this.$el).find('.ui.dropdown').dropdown('hide');
+            
+            // Clear user data
+            localStorage.removeItem('userData');
+            localStorage.removeItem('authToken');
+            this.user = null;
+            
+            // Clear cart data
+            localStorage.removeItem('cart');
+            
+            // Update Alpine store
+            if (Alpine.store('shopStore')) {
+                Alpine.store('shopStore').user = null;
+                Alpine.store('shopStore').cart = [];
+            }
+            
+            // Redirect to home
+            window.navigateTo('shop/shop_home');
         }
     }" 
     :class="{ 'sticky-menu': true, 'visible': isSticky }" style="color: white;">
-        <a class="item" @click="navigateTo('shop/shop_home')" style="color: white;"><i class="home icon" style="color: white;"></i> HOME</a>
+        <a class="item" @click="navigateTo('shop/shop_home')" style="color: rgb(0, 0, 0);"><i class="home icon" style="color: rgb(0, 0, 0);"></i> HOME</a>
         <a class="item" @click="navigateTo('shop/cart')"><i class="shopping cart icon"></i>CART</a>
         <a class="item" @click="navigateTo('shop/add_product')"><i class="plus circle icon"></i> ADD PRODUCT</a>
         <a class="item" @click="navigateTo('shop/order_list')"><i class="list alternate icon"></i> LIST OF ORDERS</a>
-        <a class="item" @click="navigateTo('shop/checkout')"><i class="credit card icon"></i> CHECKOUT</a>
+        <a class="item" @click="navigateTo('shop/userprofile')"><i class="credit card icon"></i> CHECKOUT</a>
         
-
-        <div class="right menu" ></div>
-            <a class="ui button" @click="navigateTo('shop/login')"><i @click="navigateTo('shop/login')" class="user icon"></i> Login</a>
+        <div class="right menu">
+            <template x-if="user">
+                <div class="ui dropdown item">
+                    <i class="user icon"></i>
+                    <span x-text="user.firstName + ' ' + user.lastName"></span>
+                    <i class="dropdown icon"></i>
+                    <div class="menu">
+                        <a class="item" @click="navigateTo('shop/userprofile')">
+                            <i class="id card icon"></i> Profile
+                        </a>
+                        <a class="item" @click="logout">
+                            <i class="sign out icon"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </template>
+            <template x-if="!user">
+                <a class="ui button" @click="navigateTo('shop/login')">
+                    <i class="user icon"></i> Login
+                </a>
+            </template>
         </div>
     </div>
 
@@ -155,19 +224,6 @@
 
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('menuData', () => ({
-                initDropdown() {
-                    this.$nextTick(() => {
-                        $(this.$el).find('.ui.dropdown').dropdown({
-                            action: 'nothing' // Prevent default navigation
-                        });
-                    });
-                },
-                navigateTo(route) {
-                    window.navigateTo(route); // Call global navigateTo from router.js
-                }
-            }));
-
             Alpine.store('GlobalVariable', {
                 queryParams: Alpine.reactive({})
             });
@@ -179,3 +235,4 @@
     </script>
 </body>
 </html>
+,,,
